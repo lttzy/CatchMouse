@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):wait()
 
@@ -97,8 +98,75 @@ local function Typewrite(label:string,icon:string,UIPosition:UDim2)
 	end)
 end
 
+
+local UIElement = require(ReplicatedStorage.Source.MyUIManager.UIElement)
+local GuideIcon = UIElement.New(script.GuideIcon, UIElement.Enum.UIType.Image)
+local currentGuideConnection = nil
+
+--- 新增方法：指引到UI按钮
+-- @param buttonElement UIElement对象，需要指引的UI按钮
+-- @param callback function 可选的回调函数，在点击按钮后执行
+-- @param direction string 可选的指引方向 ("Up" 或 "Down")，默认为 "Up"
+local function GuideToUIButton(buttonElement, callback, direction)
+	if not buttonElement or not buttonElement.Parent then
+		warn("GuideToUIButton: Invalid buttonElement provided.")
+		return
+	end
+
+	-- 将 GuideIcon 的父元素设置为目标按钮
+	GuideIcon.instance.Parent = buttonElement
+
+	-- 根据指引方向设置 GuideIcon 的旋转和位置
+	local guideDirection = direction or "Up" -- 默认为上方
+
+	if guideDirection == "Up" then
+		GuideIcon.instance.Rotation = 180
+		GuideIcon.instance.Position = UDim2.new(0.5, 0, -0.2, 0)
+	elseif guideDirection == "Down" then
+		GuideIcon.instance.Rotation = 0
+		GuideIcon.instance.Position = UDim2.new(0.5, 0, 1.7, 0)
+	end
+
+	-- 监听按钮点击事件
+	-- Store the connection in a controller variable
+	if currentGuideConnection then
+		currentGuideConnection:Disconnect() -- Disconnect previous if any
+	end
+	currentGuideConnection = buttonElement.MouseButton1Click:Connect(function()
+		-- 断开连接
+		currentGuideConnection:Disconnect()
+		currentGuideConnection = nil -- Clear the stored connection
+		-- 点击后将 GuideIcon 的父元素设置回 script
+		GuideIcon.instance.Parent = script
+
+		-- 如果存在回调函数，则执行
+		if callback then
+			callback()
+		end
+	end)
+end
+
+--- 取消指引到UI按钮
+-- 断开事件连接并将 GuideIcon 的父元素设置回 script
+local function CancelGuideToUIButton()
+	-- 检查是否存在当前的指引连接
+	if currentGuideConnection then
+		-- 断开连接
+		currentGuideConnection:Disconnect()
+		-- 清除存储的连接
+		currentGuideConnection = nil
+	end
+
+	-- 将 GuideIcon 的父元素设置回 script
+	-- 检查 GuideIcon.instance 是否有效，避免错误
+	if GuideIcon and GuideIcon.instance then
+		GuideIcon.instance.Parent = script
+	end
+end
 module.ConnectionBeam = ConnectionBeam
 module.RemoveBeam = RemoveBeam
 module.Typewrite = Typewrite
+module.GuideToUIButton = GuideToUIButton
+module.CancelGuideToUIButton = CancelGuideToUIButton
 
 return module
